@@ -9,36 +9,34 @@ conn = snowflake.connector.connect(**st.secrets["snowflake"])
 
 # 👉 LOAD ONLY UNFILLED ORDERS
 query = """
-SELECT ORDER_ID, INGREDIENTS, NAME_ON_ORDER, ORDER_FILLED
+SELECT ORDER_ID, NAME_ON_ORDER, INGREDIENTS, ORDER_FILLED
 FROM smoothies.public.orders
 WHERE ORDER_FILLED = FALSE
 """
+
 df = pd.read_sql(query, conn)
 
 if df.empty:
-    st.success("All orders are filled 🎉")
+    st.success("All orders are filled! 🎉")
 else:
     st.write("Mark orders as filled:")
 
-    # 👉 Editable table
+    # 👉 EDIT TABLE
     edited_df = st.data_editor(df, use_container_width=True)
 
-    # 👉 Submit button
-    if st.button("Update Orders"):
-        try:
-            cursor = conn.cursor()
+    # 👉 BUTTON
+    if st.button("Submit Updates"):
 
-            for _, row in edited_df.iterrows():
-                cursor.execute(
-                    """
-                    UPDATE smoothies.public.orders
-                    SET ORDER_FILLED = %s
-                    WHERE ORDER_ID = %s
-                    """,
-                    (row["ORDER_FILLED"], row["ORDER_ID"])
-                )
+        cursor = conn.cursor()
 
-            st.success("Orders updated successfully ✅")
+        for index, row in edited_df.iterrows():
+            cursor.execute(
+                """
+                UPDATE smoothies.public.orders
+                SET ORDER_FILLED = %s
+                WHERE ORDER_ID = %s
+                """,
+                (row["ORDER_FILLED"], row["ORDER_ID"])
+            )
 
-        except Exception as e:
-            st.error("Update failed ❌")
+        st.success("Orders updated successfully ✅")
