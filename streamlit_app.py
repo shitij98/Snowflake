@@ -27,26 +27,28 @@ ingredients = st.multiselect(
 # 👉 SHOW DATA PER FRUIT (USING .loc)
 if ingredients:
     for fruit_chosen in ingredients:
-
         try:
-            # 🔥 THIS IS THE KEY LINE
+            # 🔥 GET SEARCH VALUE
             search_value = pd_df.loc[
                 pd_df["FRUIT_NAME"] == fruit_chosen,
                 "SEARCH_ON"
             ].iloc[0]
 
+            # (optional debug - you can remove later)
             st.write(f"Search value for {fruit_chosen}: {search_value}")
 
+            # 👉 API CALL
             response = requests.get(
                 f"https://my.smoothiefroot.com/api/fruit/{search_value}",
                 timeout=5
             )
 
-            if response.status_code == 200:
+            # 👉 HANDLE RESPONSE
+            if response.status_code == 200 and response.json():
                 st.subheader(f"{fruit_chosen} Nutrition Information")
                 st.dataframe(response.json(), use_container_width=True)
             else:
-                st.warning(f"No data found for {fruit_chosen}")
+                st.info(f"{fruit_chosen} data not available in SmoothieFroot API")
 
         except IndexError:
             st.warning(f"No SEARCH_ON mapping for {fruit_chosen}")
