@@ -18,32 +18,36 @@ fruit_list = pd_df["FRUIT_NAME"].tolist()
 # 👉 INPUT
 name_on_order = st.text_input("Name for your smoothie order")
 
+# 🔥 NEW: QUANTITY INPUT
+quantity = st.number_input(
+    "Quantity",
+    min_value=1,
+    max_value=10,
+    value=1
+)
+
 ingredients = st.multiselect(
     "Choose up to 5 ingredients:",
     fruit_list,
     max_selections=5
 )
 
-# 👉 SHOW DATA PER FRUIT (USING .loc)
+# 👉 SHOW DATA PER FRUIT
 if ingredients:
     for fruit_chosen in ingredients:
         try:
-            # 🔥 GET SEARCH VALUE
             search_value = pd_df.loc[
                 pd_df["FRUIT_NAME"] == fruit_chosen,
                 "SEARCH_ON"
             ].iloc[0]
 
-            # (optional debug - you can remove later)
             st.write(f"Search value for {fruit_chosen}: {search_value}")
 
-            # 👉 API CALL
             response = requests.get(
                 f"https://my.smoothiefroot.com/api/fruit/{search_value}",
                 timeout=5
             )
 
-            # 👉 HANDLE RESPONSE
             if response.status_code == 200 and response.json():
                 st.subheader(f"{fruit_chosen} Nutrition Information")
                 st.dataframe(response.json(), use_container_width=True)
@@ -68,12 +72,16 @@ if submit:
         try:
             ingredients_string = ' '.join(ingredients)
 
+            # 🔥 UPDATED INSERT (WITH QUANTITY)
             insert_query = """
-                INSERT INTO smoothies.public.orders(name_on_order, ingredients)
-                VALUES (%s, %s)
+                INSERT INTO smoothies.public.orders(name_on_order, ingredients, quantity)
+                VALUES (%s, %s, %s)
             """
 
-            session.execute(insert_query, (name_on_order, ingredients_string))
+            session.execute(
+                insert_query,
+                (name_on_order, ingredients_string, quantity)
+            )
 
             st.success(f"Your Smoothie is ordered, {name_on_order}! 🎉")
 
