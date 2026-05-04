@@ -1,22 +1,31 @@
 import streamlit as st
-from snowflake.snowpark.context import get_active_session
+import snowflake.connector
 from snowflake.snowpark.functions import col
 
 st.title("Customize Your Smoothie! 🥤")
 
-session = get_active_session()
+conn = snowflake.connector.connect(
+    user="shitij.gupta@wolterskluwer.com",
+    password="Lalaji@11235813",
+    account="SYS_ADMIN",
+    warehouse="COMPUTE_WH",
+    database="SMOOTHIES",
+    schema="PUBLIC"
+)
+
+session = conn.cursor()
 
 # 👉 NAME INPUT
 name_on_order = st.text_input("Name for your smoothie order")
 
 # 👉 DATA
-my_dataframe = session.table("smoothies.public.fruit_options").select(col("FRUIT_NAME"))
-fruit_list = [row["FRUIT_NAME"] for row in my_dataframe.collect()]
+session.execute("SELECT FRUIT_NAME FROM smoothies.public.fruit_options")
+fruit_list = [row[0] for row in session.fetchall()]
 
 ingredients = st.multiselect(
     "Choose up to 5 ingredients:",
     fruit_list,
-    max_selections=5   # 🔥 THIS LINE
+    max_selections=5
 )
 # 👉 BUTTON
 submit = st.button("Submit Order")
@@ -34,6 +43,6 @@ if submit and ingredients and name_on_order:
 
     st.write(my_insert_stmt)  # debug
 
-    session.sql(my_insert_stmt).collect()
+    session.execute(my_insert_stmt)
 
     st.success("Your Smoothie is ordered, " + name_on_order + "! 🎉")
