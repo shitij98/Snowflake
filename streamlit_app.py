@@ -6,8 +6,12 @@ import requests
 st.title("Customize Your Smoothie! 🥤")
 
 # 👉 CONNECT
-conn = snowflake.connector.connect(**st.secrets["snowflake"])
-session = conn.cursor()
+session.execute("SELECT FRUIT_NAME, SEARCH_ON FROM smoothies.public.fruit_options")
+rows = session.fetchall()
+
+fruit_map = {row[0]: row[1] for row in rows}
+
+fruit_list = list(fruit_map.keys())
 
 # 👉 INPUT
 name_on_order = st.text_input("Name for your smoothie order")
@@ -29,22 +33,25 @@ if ingredients:
 
     for fruit_chosen in ingredients:
 
-        ingredients_string = ingredients_string + fruit_chosen + ' '
+    search_value = fruit_map.get(fruit_chosen)
 
-        st.subheader(fruit_chosen + " Nutrition Information")
-
+    if search_value:
         try:
-            smoothiefroot_response = requests.get(
-                "https://my.smoothiefroot.com/api/fruit/" + fruit_chosen.lower()
+            response = requests.get(
+                f"https://my.smoothiefroot.com/api/fruit/{search_value}"
             )
 
+            st.subheader(f"{fruit_chosen} Nutrition Information")
+
             st.dataframe(
-                data=smoothiefroot_response.json(),
+                response.json(),
                 use_container_width=True
             )
 
         except:
-            st.warning(f"{fruit_chosen} not found in Smoothiefroot database")
+            st.warning(f"Error fetching data for {fruit_chosen}")
+    else:
+        st.warning(f"No API mapping found for {fruit_chosen}")
 
 # 👉 SUBMIT
 submit = st.button("Submit Order")
