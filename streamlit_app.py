@@ -1,19 +1,19 @@
 import streamlit as st
 import snowflake.connector
 import requests
+import pandas as pd
 
 st.title("Customize Your Smoothie! 🥤")
 
-# 👉 CONNECT (using secrets)
+# 👉 CONNECT
 conn = snowflake.connector.connect(**st.secrets["snowflake"])
 session = conn.cursor()
 
-# 👉 GET FRUIT MAP
-session.execute("SELECT FRUIT_NAME, SEARCH_ON FROM smoothies.public.fruit_options")
-rows = session.fetchall()
+# 👉 LOAD DATA (Snowflake → Pandas)
+query = "SELECT FRUIT_NAME, SEARCH_ON FROM smoothies.public.fruit_options"
+pd_df = pd.read_sql(query, conn)
 
-fruit_map = {row[0]: row[1] for row in rows}
-fruit_list = list(fruit_map.keys())
+fruit_list = pd_df["FRUIT_NAME"].tolist()
 
 # 👉 INPUT
 name_on_order = st.text_input("Name for your smoothie order")
@@ -24,29 +24,35 @@ ingredients = st.multiselect(
     max_selections=5
 )
 
-# 👉 SHOW DATA PER FRUIT
+# 👉 SHOW DATA PER FRUIT (USING .loc)
 if ingredients:
     for fruit_chosen in ingredients:
 
-        search_value = fruit_map.get(fruit_chosen)
+        try:
+            # 🔥 THIS IS THE KEY LINE
+            search_value = pd_df.loc[
+                pd_df["FRUIT_NAME"] == fruit_chosen,
+                "SEARCH_ON"
+            ].iloc[0]
 
-        if search_value:
-            try:
-                response = requests.get(
-                    f"https://my.smoothiefroot.com/api/fruit/{search_value}",
-                    timeout=5
-                )
+            st.write(f"Search value for {fruit_chosen}: {search_value}")
 
-                if response.status_code == 200:
-                    st.subheader(f"{fruit_chosen} Nutrition Information")
-                    st.dataframe(response.json(), use_container_width=True)
-                else:
-                    st.warning(f"No data found for {fruit_chosen}")
+            response = requests.get(
+                f"https://my.smoothiefroot.com/api/fruit/{search_value}",
+                timeout=5
+            )
 
-            except requests.exceptions.RequestException:
-                st.error(f"API error for {fruit_chosen}")
-        else:
-            st.warning(f"No API mapping found for {fruit_chosen}")
+            if response.status_code == 200:
+                st.subheader(f"{fruit_chosen} Nutrition Information")
+                st.dataframe(response.json(), use_container_width=True)
+            else:
+                st.warning(f"No data found for {fruit_chosen}")
+
+        except IndexError:
+            st.warning(f"No SEARCH_ON mapping for {fruit_chosen}")
+
+        except requests.exceptions.RequestException:
+            st.error(f"API error for {fruit_chosen}")
 
 # 👉 SUBMIT
 submit = st.button("Submit Order")
@@ -60,7 +66,6 @@ if submit:
         try:
             ingredients_string = ' '.join(ingredients)
 
-            # ✅ SAFE SQL (no injection)
             insert_query = """
                 INSERT INTO smoothies.public.orders(name_on_order, ingredients)
                 VALUES (%s, %s)
@@ -70,5 +75,5 @@ if submit:
 
             st.success(f"Your Smoothie is ordered, {name_on_order}! 🎉")
 
-        except Exception as e:
-            st.error("Failed to place order. Check logs.")
+        except Exception:
+            st.error("Failed to place order.")
