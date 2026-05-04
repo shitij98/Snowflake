@@ -72,4 +72,3 @@ if submit:
 
         except Exception as e:
             st.error("Failed to place order. Check logs.")
-```
