@@ -25,17 +25,18 @@ ingredients = st.multiselect(
 # 👉 SHOW DATA PER FRUIT (THIS IS THE FIXED PART)
 if ingredients:
 
-    st.subheader("Nutrition Information")
+    ingredients_string = ''
 
     for fruit_chosen in ingredients:
-        fruit = fruit_chosen.lower()
+
+        ingredients_string = ingredients_string + fruit_chosen + ' '
+
+        st.subheader(fruit_chosen + " Nutrition Information")
 
         try:
             smoothiefroot_response = requests.get(
-                f"https://my.smoothiefroot.com/api/fruit/{fruit}"
+                "https://my.smoothiefroot.com/api/fruit/" + fruit_chosen.lower()
             )
-
-            st.write(f"🍓 {fruit_chosen}")
 
             st.dataframe(
                 data=smoothiefroot_response.json(),
@@ -43,7 +44,7 @@ if ingredients:
             )
 
         except:
-            st.warning(f"Could not fetch data for {fruit_chosen}")
+            st.warning(f"{fruit_chosen} not found in Smoothiefroot database")
 
 # 👉 SUBMIT
 submit = st.button("Submit Order")
