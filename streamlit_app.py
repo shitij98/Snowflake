@@ -4,15 +4,7 @@ from snowflake.snowpark.functions import col
 
 st.title("Customize Your Smoothie! 🥤")
 
-conn = snowflake.connector.connect(
-    user="shitij.gupta@wolterskluwer.com",
-    password="Lalaji@11235813",
-    account="SYS_ADMIN",
-    warehouse="COMPUTE_WH",
-    database="SMOOTHIES",
-    schema="PUBLIC"
-)
-
+conn = snowflake.connector.connect(**st.secrets["snowflake"])
 session = conn.cursor()
 
 # 👉 NAME INPUT
